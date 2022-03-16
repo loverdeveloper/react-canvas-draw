@@ -713,38 +713,38 @@ export default class CanvasDraw extends PureComponent {
 
     this.clearWindow(ctx);
 
-    // Draw brush preview
-    ctx.beginPath();
-    ctx.fillStyle = this.props.brushColor;
-    ctx.arc(brush.x, brush.y, this.props.brushRadius, 0, Math.PI * 2, true);
-    ctx.fill();
+//     // Draw brush preview
+//     ctx.beginPath();
+//     ctx.fillStyle = this.props.brushColor;
+//     ctx.arc(brush.x, brush.y, this.props.brushRadius, 0, Math.PI * 2, true);
+//     ctx.fill();
 
-    // Draw mouse point (the one directly at the cursor)
-    ctx.beginPath();
-    ctx.fillStyle = this.props.catenaryColor;
-    ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2, true);
-    ctx.fill();
+//     // Draw mouse point (the one directly at the cursor)
+//     ctx.beginPath();
+//     ctx.fillStyle = this.props.catenaryColor;
+//     ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2, true);
+//     ctx.fill();
 
-    // Draw catenary
-    if (this.lazy.isEnabled()) {
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.setLineDash([2, 4]);
-      ctx.strokeStyle = this.props.catenaryColor;
-      this.catenary.drawToCanvas(
-        this.ctx.interface,
-        brush,
-        pointer,
-        this.chainLength
-      );
-      ctx.stroke();
-    }
+//     // Draw catenary
+//     if (this.lazy.isEnabled()) {
+//       ctx.beginPath();
+//       ctx.lineWidth = 2;
+//       ctx.lineCap = "round";
+//       ctx.setLineDash([2, 4]);
+//       ctx.strokeStyle = this.props.catenaryColor;
+//       this.catenary.drawToCanvas(
+//         this.ctx.interface,
+//         brush,
+//         pointer,
+//         this.chainLength
+//       );
+//       ctx.stroke();
+//     }
 
-    // Draw brush point (the one in the middle of the brush preview)
-    ctx.beginPath();
-    ctx.fillStyle = this.props.catenaryColor;
-    ctx.arc(brush.x, brush.y, 2, 0, Math.PI * 2, true);
-    ctx.fill();
+//     // Draw brush point (the one in the middle of the brush preview)
+//     ctx.beginPath();
+//     ctx.fillStyle = this.props.catenaryColor;
+//     ctx.arc(brush.x, brush.y, 2, 0, Math.PI * 2, true);
+//     ctx.fill();
   };
 }
