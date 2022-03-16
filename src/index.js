@@ -1,10 +1,22 @@
+function _createForOfIteratorHelperLoose(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; return function () { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } it = o[Symbol.iterator](); return it.next.bind(it); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _extends() { _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; }; return _extends.apply(this, arguments); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _inheritsLoose(subClass, superClass) { subClass.prototype = Object.create(superClass.prototype); subClass.prototype.constructor = subClass; subClass.__proto__ = superClass; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 import React, { PureComponent } from "react";
 import PropTypes from "prop-types";
 import { LazyBrush } from "lazy-brush";
 import { Catenary } from "catenary-curve";
-
 import ResizeObserver from "resize-observer-polyfill";
-
 import CoordinateSystem, { IDENTITY } from "./coordinateSystem";
 import drawImage from "./drawImage";
 import { DefaultState } from "./interactionStateMachine";
@@ -13,314 +25,646 @@ import makePassiveEventOption from "./makePassiveEventOption";
 function midPointBtw(p1, p2) {
   return {
     x: p1.x + (p2.x - p1.x) / 2,
-    y: p1.y + (p2.y - p1.y) / 2,
+    y: p1.y + (p2.y - p1.y) / 2
   };
 }
 
-const canvasStyle = {
+var canvasStyle = {
   display: "block",
-  position: "absolute",
-};
+  position: "absolute"
+}; // The order of these is important: grid > drawing > temp > interface
 
-// The order of these is important: grid > drawing > temp > interface
-const canvasTypes = ["grid", "drawing", "temp", "interface"];
-
-const dimensionsPropTypes = PropTypes.oneOfType([
-  PropTypes.number,
-  PropTypes.string,
-]);
-
-const boundsProp = PropTypes.shape({
+var canvasTypes = ["grid", "drawing", "temp", "interface"];
+var dimensionsPropTypes = process.env.NODE_ENV !== "production" ? PropTypes.oneOfType([PropTypes.number, PropTypes.string]) : {};
+var boundsProp = process.env.NODE_ENV !== "production" ? PropTypes.shape({
   min: PropTypes.number.isRequired,
-  max: PropTypes.number.isRequired,
-});
+  max: PropTypes.number.isRequired
+}) : {};
 
-export default class CanvasDraw extends PureComponent {
-  static propTypes = {
-    onChange: PropTypes.func,
-    loadTimeOffset: PropTypes.number,
-    lazyRadius: PropTypes.number,
-    brushRadius: PropTypes.number,
-    brushColor: PropTypes.string,
-    catenaryColor: PropTypes.string,
-    gridColor: PropTypes.string,
-    backgroundColor: PropTypes.string,
-    hideGrid: PropTypes.bool,
-    canvasWidth: dimensionsPropTypes,
-    canvasHeight: dimensionsPropTypes,
-    disabled: PropTypes.bool,
-    imgSrc: PropTypes.string,
-    saveData: PropTypes.string,
-    immediateLoading: PropTypes.bool,
-    hideInterface: PropTypes.bool,
-    gridSizeX: PropTypes.number,
-    gridSizeY: PropTypes.number,
-    gridLineWidth: PropTypes.number,
-    hideGridX: PropTypes.bool,
-    hideGridY: PropTypes.bool,
-    enablePanAndZoom: PropTypes.bool,
-    mouseZoomFactor: PropTypes.number,
-    zoomExtents: boundsProp,
-    clampLinesToDocument: PropTypes.bool,
-  };
-
-  static defaultProps = {
-    onChange: null,
-    loadTimeOffset: 5,
-    lazyRadius: 12,
-    brushRadius: 10,
-    brushColor: "#444",
-    catenaryColor: "#0a0302",
-    gridColor: "rgba(150,150,150,0.17)",
-    backgroundColor: "#FFF",
-    hideGrid: false,
-    canvasWidth: 400,
-    canvasHeight: 400,
-    disabled: false,
-    imgSrc: "",
-    saveData: "",
-    immediateLoading: false,
-    hideInterface: false,
-    gridSizeX: 25,
-    gridSizeY: 25,
-    gridLineWidth: 0.5,
-    hideGridX: false,
-    hideGridY: false,
-    enablePanAndZoom: false,
-    mouseZoomFactor: 0.01,
-    zoomExtents: { min: 0.33, max: 3 },
-    clampLinesToDocument: false,
-  };
+var CanvasDraw = /*#__PURE__*/function (_PureComponent) {
+  _inheritsLoose(CanvasDraw, _PureComponent);
 
   ///// public API /////////////////////////////////////////////////////////////
+  function CanvasDraw(props) {
+    var _this;
 
-  constructor(props) {
-    super(props);
+    _this = _PureComponent.call(this, props) || this;
 
-    this.canvas = {};
-    this.ctx = {};
+    _defineProperty(_assertThisInitialized(_this), "undo", function () {
+      var lines = [];
 
-    this.catenary = new Catenary();
+      if (_this.lines.length) {
+        lines = _this.lines.slice(0, -1);
+      } else if (_this.erasedLines.length) {
+        lines = _this.erasedLines.pop();
+      }
 
-    this.points = [];
-    this.lines = [];
-    this.erasedLines = [];
+      _this.clearExceptErasedLines();
 
-    this.mouseHasMoved = true;
-    this.valuesChanged = true;
-    this.isDrawing = false;
-    this.isPressing = false;
-    this.deferRedrawOnViewChange = false;
+      _this.simulateDrawingLines({
+        lines: lines,
+        immediate: true
+      });
 
-    this.interactionSM = new DefaultState();
-    this.coordSystem = new CoordinateSystem({
-      scaleExtents: props.zoomExtents,
-      documentSize: { width: props.canvasWidth, height: props.canvasHeight },
+      _this.triggerOnChange();
     });
-    this.coordSystem.attachViewChangeListener(this.applyView.bind(this));
+
+    _defineProperty(_assertThisInitialized(_this), "eraseAll", function () {
+      _this.erasedLines.push([].concat(_this.lines));
+
+      _this.clearExceptErasedLines();
+
+      _this.triggerOnChange();
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "clear", function () {
+      _this.erasedLines = [];
+
+      _this.clearExceptErasedLines();
+
+      _this.resetView();
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "resetView", function () {
+      return _this.coordSystem.resetView();
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "setView", function (view) {
+      return _this.coordSystem.setView(view);
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "getSaveData", function () {
+      // Construct and return the stringified saveData object
+      return JSON.stringify({
+        lines: _this.lines,
+        width: _this.props.canvasWidth,
+        height: _this.props.canvasHeight
+      });
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "getDataURL", function (fileType, useBgImage, backgroundColour) {
+      // Get a reference to the "drawing" layer of the canvas
+      var canvasToExport = _this.canvas.drawing;
+      var context = canvasToExport.getContext("2d"); //cache height and width
+
+      var width = canvasToExport.width;
+      var height = canvasToExport.height; //get the current ImageData for the canvas
+
+      var storedImageData = context.getImageData(0, 0, width, height); //store the current globalCompositeOperation
+
+      var compositeOperation = context.globalCompositeOperation; //set to draw behind current content
+
+      context.globalCompositeOperation = "destination-over"; // If "useBgImage" has been set to true, this takes precedence over the background colour parameter
+
+      if (useBgImage) {
+        if (!_this.props.imgSrc) return "Background image source not set"; // Write the background image
+
+        _this.drawImage();
+      } else if (backgroundColour != null) {
+        //set background color
+        context.fillStyle = backgroundColour; //fill entire canvas with background colour
+
+        context.fillRect(0, 0, width, height);
+      } // If the file type has not been specified, default to PNG
+
+
+      if (!fileType) fileType = "png"; // Export the canvas to data URL
+
+      var imageData = canvasToExport.toDataURL("image/" + fileType); //clear the canvas
+
+      context.clearRect(0, 0, width, height); //restore it with original / cached ImageData
+
+      context.putImageData(storedImageData, 0, 0); //reset the globalCompositeOperation to what it was
+
+      context.globalCompositeOperation = compositeOperation;
+      return imageData;
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "loadSaveData", function (saveData, immediate) {
+      if (immediate === void 0) {
+        immediate = _this.props.immediateLoading;
+      }
+
+      if (typeof saveData !== "string") {
+        throw new Error("saveData needs to be of type string!");
+      }
+
+      var _JSON$parse = JSON.parse(saveData),
+          lines = _JSON$parse.lines,
+          width = _JSON$parse.width,
+          height = _JSON$parse.height;
+
+      if (!lines || typeof lines.push !== "function") {
+        throw new Error("saveData.lines needs to be an array!");
+      }
+
+      _this.clear();
+
+      if (width === _this.props.canvasWidth && height === _this.props.canvasHeight) {
+        _this.simulateDrawingLines({
+          lines: lines,
+          immediate: immediate
+        });
+      } else {
+        // we need to rescale the lines based on saved & current dimensions
+        var scaleX = _this.props.canvasWidth / width;
+        var scaleY = _this.props.canvasHeight / height;
+        var scaleAvg = (scaleX + scaleY) / 2;
+
+        _this.simulateDrawingLines({
+          lines: lines.map(function (line) {
+            return _extends({}, line, {
+              points: line.points.map(function (p) {
+                return {
+                  x: p.x * scaleX,
+                  y: p.y * scaleY
+                };
+              }),
+              brushRadius: line.brushRadius * scaleAvg
+            });
+          }),
+          immediate: immediate
+        });
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "componentWillUnmount", function () {
+      _this.canvasObserver.unobserve(_this.canvasContainer);
+
+      _this.canvas["interface"] && _this.canvas["interface"].removeEventListener("wheel", _this.handleWheel);
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "handleWheel", function (e) {
+      _this.interactionSM = _this.interactionSM.handleMouseWheel(e, _assertThisInitialized(_this));
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "handleDrawStart", function (e) {
+      _this.interactionSM = _this.interactionSM.handleDrawStart(e, _assertThisInitialized(_this));
+      _this.mouseHasMoved = true;
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "handleDrawMove", function (e) {
+      _this.interactionSM = _this.interactionSM.handleDrawMove(e, _assertThisInitialized(_this));
+      _this.mouseHasMoved = true;
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "handleDrawEnd", function (e) {
+      _this.interactionSM = _this.interactionSM.handleDrawEnd(e, _assertThisInitialized(_this));
+      _this.mouseHasMoved = true;
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "applyView", function () {
+      if (!_this.ctx.drawing) {
+        return;
+      }
+
+      canvasTypes.map(function (name) {
+        return _this.ctx[name];
+      }).forEach(function (ctx) {
+        _this.clearWindow(ctx);
+
+        var m = _this.coordSystem.transformMatrix;
+        ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+      });
+
+      if (!_this.deferRedrawOnViewChange) {
+        _this.drawGrid(_this.ctx.grid);
+
+        _this.redrawImage();
+
+        _this.loop({
+          once: true
+        });
+
+        var lines = _this.lines;
+        _this.lines = [];
+
+        _this.simulateDrawingLines({
+          lines: lines,
+          immediate: true
+        });
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "handleCanvasResize", function (entries) {
+      var saveData = _this.getSaveData();
+
+      _this.deferRedrawOnViewChange = true;
+
+      try {
+        for (var _iterator = _createForOfIteratorHelperLoose(entries), _step; !(_step = _iterator()).done;) {
+          var entry = _step.value;
+          var _entry$contentRect = entry.contentRect,
+              width = _entry$contentRect.width,
+              height = _entry$contentRect.height;
+
+          _this.setCanvasSize(_this.canvas["interface"], width, height);
+
+          _this.setCanvasSize(_this.canvas.drawing, width, height);
+
+          _this.setCanvasSize(_this.canvas.temp, width, height);
+
+          _this.setCanvasSize(_this.canvas.grid, width, height);
+
+          _this.coordSystem.documentSize = {
+            width: width,
+            height: height
+          };
+
+          _this.drawGrid(_this.ctx.grid);
+
+          _this.drawImage();
+
+          _this.loop({
+            once: true
+          });
+        }
+
+        _this.loadSaveData(saveData, true);
+      } finally {
+        _this.deferRedrawOnViewChange = false;
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "clampPointToDocument", function (point) {
+      if (_this.props.clampLinesToDocument) {
+        return {
+          x: Math.max(Math.min(point.x, _this.props.canvasWidth), 0),
+          y: Math.max(Math.min(point.y, _this.props.canvasHeight), 0)
+        };
+      } else {
+        return point;
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "redrawImage", function () {
+      _this.image && _this.image.complete && drawImage({
+        ctx: _this.ctx.grid,
+        img: _this.image
+      });
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "simulateDrawingLines", function (_ref) {
+      var lines = _ref.lines,
+          immediate = _ref.immediate;
+      // Simulate live-drawing of the loaded lines
+      // TODO use a generator
+      var curTime = 0;
+      var timeoutGap = immediate ? 0 : _this.props.loadTimeOffset;
+      lines.forEach(function (line) {
+        var points = line.points,
+            brushColor = line.brushColor,
+            brushRadius = line.brushRadius; // Draw all at once if immediate flag is set, instead of using setTimeout
+
+        if (immediate) {
+          // Draw the points
+          _this.drawPoints({
+            points: points,
+            brushColor: brushColor,
+            brushRadius: brushRadius
+          }); // Save line with the drawn points
+
+
+          _this.points = points;
+
+          _this.saveLine({
+            brushColor: brushColor,
+            brushRadius: brushRadius
+          });
+
+          return;
+        } // Use timeout to draw
+
+
+        var _loop = function _loop(i) {
+          curTime += timeoutGap;
+          window.setTimeout(function () {
+            _this.drawPoints({
+              points: points.slice(0, i + 1),
+              brushColor: brushColor,
+              brushRadius: brushRadius
+            });
+          }, curTime);
+        };
+
+        for (var i = 1; i < points.length; i++) {
+          _loop(i);
+        }
+
+        curTime += timeoutGap;
+        window.setTimeout(function () {
+          // Save this line with its props instead of this.props
+          _this.points = points;
+
+          _this.saveLine({
+            brushColor: brushColor,
+            brushRadius: brushRadius
+          });
+        }, curTime);
+      });
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "setCanvasSize", function (canvas, width, height) {
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = width;
+      canvas.style.height = height;
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "drawPoints", function (_ref2) {
+      var points = _ref2.points,
+          brushColor = _ref2.brushColor,
+          brushRadius = _ref2.brushRadius;
+      _this.ctx.temp.lineJoin = "round";
+      _this.ctx.temp.lineCap = "round";
+      _this.ctx.temp.strokeStyle = brushColor;
+
+      _this.clearWindow(_this.ctx.temp);
+
+      _this.ctx.temp.lineWidth = brushRadius * 2;
+      var p1 = points[0];
+      var p2 = points[1];
+
+      _this.ctx.temp.moveTo(p2.x, p2.y);
+
+      _this.ctx.temp.beginPath();
+
+      for (var i = 1, len = points.length; i < len; i++) {
+        // we pick the point between pi+1 & pi+2 as the
+        // end point and p1 as our control point
+        var midPoint = midPointBtw(p1, p2);
+
+        _this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
+
+        p1 = points[i];
+        p2 = points[i + 1];
+      } // Draw last line as a straight line while
+      // we wait for the next point to be able to calculate
+      // the bezier control point
+
+
+      _this.ctx.temp.lineTo(p1.x, p1.y);
+
+      _this.ctx.temp.stroke();
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "saveLine", function (_temp) {
+      var _ref3 = _temp === void 0 ? {} : _temp,
+          brushColor = _ref3.brushColor,
+          brushRadius = _ref3.brushRadius;
+
+      if (_this.points.length < 2) return; // Save as new line
+
+      _this.lines.push({
+        points: [].concat(_this.points),
+        brushColor: brushColor || _this.props.brushColor,
+        brushRadius: brushRadius || _this.props.brushRadius
+      }); // Reset points array
+
+
+      _this.points.length = 0; // Copy the line to the drawing canvas
+
+      _this.inClientSpace([_this.ctx.drawing, _this.ctx.temp], function () {
+        _this.ctx.drawing.drawImage(_this.canvas.temp, 0, 0, _this.canvas.drawing.width, _this.canvas.drawing.height);
+      }); // Clear the temporary line-drawing canvas
+
+
+      _this.clearWindow(_this.ctx.temp);
+
+      _this.triggerOnChange();
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "triggerOnChange", function () {
+      _this.props.onChange && _this.props.onChange(_assertThisInitialized(_this));
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "clearWindow", function (ctx) {
+      _this.inClientSpace([ctx], function () {
+        return ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      });
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "clearExceptErasedLines", function () {
+      _this.lines = [];
+      _this.valuesChanged = true;
+
+      _this.clearWindow(_this.ctx.drawing);
+
+      _this.clearWindow(_this.ctx.temp);
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "loop", function (_temp2) {
+      var _ref4 = _temp2 === void 0 ? {} : _temp2,
+          _ref4$once = _ref4.once,
+          once = _ref4$once === void 0 ? false : _ref4$once;
+
+      if ((_this.lazy && _this.lazy.getPointerCoordinates) && _this.mouseHasMoved || _this.valuesChanged) {
+        var pointer = _this.lazy.getPointerCoordinates();
+
+        var brush = _this.lazy.getBrushCoordinates();
+
+        _this.drawInterface(_this.ctx["interface"], pointer, brush);
+
+        _this.mouseHasMoved = false;
+        _this.valuesChanged = false;
+      }
+
+      if (!once) {
+        window.requestAnimationFrame(function () {
+          _this.loop();
+        });
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "inClientSpace", function (ctxs, action) {
+      ctxs.forEach(function (ctx) {
+        ctx.save();
+        ctx.setTransform(IDENTITY.a, IDENTITY.b, IDENTITY.c, IDENTITY.d, IDENTITY.e, IDENTITY.f);
+      });
+
+      try {
+        action();
+      } finally {
+        ctxs.forEach(function (ctx) {
+          return ctx.restore();
+        });
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "drawImage", function () {
+      if (!_this.props.imgSrc) return; // Load the image
+
+      _this.image = new Image(); // Prevent SecurityError "Tainted canvases may not be exported." #70
+
+      _this.image.crossOrigin = "anonymous"; // Draw the image once loaded
+
+      _this.image.onload = _this.redrawImage;
+      _this.image.src = _this.props.imgSrc;
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "drawGrid", function (ctx) {
+      if (_this.props.hideGrid) return;
+
+      _this.clearWindow(ctx);
+
+      var gridSize = 25;
+      var _this$coordSystem$can = _this.coordSystem.canvasBounds,
+          viewMin = _this$coordSystem$can.viewMin,
+          viewMax = _this$coordSystem$can.viewMax;
+      var minx = Math.floor(viewMin.x / gridSize - 1) * gridSize;
+      var miny = Math.floor(viewMin.y / gridSize - 1) * gridSize;
+      var maxx = viewMax.x + gridSize;
+      var maxy = viewMax.y + gridSize;
+      ctx.beginPath();
+      ctx.setLineDash([5, 1]);
+      ctx.setLineDash([]);
+      ctx.strokeStyle = _this.props.gridColor;
+      ctx.lineWidth = _this.props.gridLineWidth;
+
+      if (!_this.props.hideGridX) {
+        var countX = minx;
+        var gridSizeX = _this.props.gridSizeX;
+
+        while (countX < maxx) {
+          countX += gridSizeX;
+          ctx.moveTo(countX, miny);
+          ctx.lineTo(countX, maxy);
+        }
+
+        ctx.stroke();
+      }
+
+      if (!_this.props.hideGridY) {
+        var countY = miny;
+        var gridSizeY = _this.props.gridSizeY;
+
+        while (countY < maxy) {
+          countY += gridSizeY;
+          ctx.moveTo(minx, countY);
+          ctx.lineTo(maxx, countY);
+        }
+
+        ctx.stroke();
+      }
+    });
+
+    _defineProperty(_assertThisInitialized(_this), "drawInterface", function (ctx, pointer, brush) {
+      if (_this.props.hideInterface) return;
+
+      _this.clearWindow(ctx); // Draw brush preview
+
+
+      // ctx.beginPath();
+      // ctx.fillStyle = _this.props.brushColor;
+      // ctx.arc(brush.x, brush.y, _this.props.brushRadius, 0, Math.PI * 2, true);
+      // ctx.fill(); // Draw mouse point (the one directly at the cursor)
+      //
+      // ctx.beginPath();
+      // ctx.fillStyle = _this.props.catenaryColor;
+      // ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2, true);
+      // ctx.fill(); // Draw catenary
+
+      // if (_this.lazy.isEnabled()) {
+      //   ctx.beginPath();
+      //   ctx.lineWidth = 2;
+      //   ctx.lineCap = "round";
+      //   ctx.setLineDash([2, 4]);
+      //   ctx.strokeStyle = _this.props.catenaryColor;
+      //
+      //   // _this.catenary.drawToCanvas(_this.ctx["interface"], brush, pointer, _this.chainLength);
+      //
+      //   ctx.stroke();
+      // } // Draw brush point (the one in the middle of the brush preview)
+
+
+      // ctx.beginPath();
+      // ctx.fillStyle = _this.props.catenaryColor;
+      // ctx.arc(brush.x, brush.y, 2, 0, Math.PI * 2, true);
+      // ctx.fill();
+    });
+
+    _this.canvas = {};
+    _this.ctx = {};
+    _this.catenary = new Catenary();
+    _this.points = [];
+    _this.lines = [];
+    _this.erasedLines = [];
+    _this.mouseHasMoved = true;
+    _this.valuesChanged = true;
+    _this.isDrawing = false;
+    _this.isPressing = false;
+    _this.deferRedrawOnViewChange = false;
+    _this.interactionSM = new DefaultState();
+    _this.coordSystem = new CoordinateSystem({
+      scaleExtents: props.zoomExtents,
+      documentSize: {
+        width: props.canvasWidth,
+        height: props.canvasHeight
+      }
+    });
+
+    _this.coordSystem.attachViewChangeListener(_this.applyView.bind(_assertThisInitialized(_this)));
+
+    return _this;
   }
 
-  undo = () => {
-    let lines = [];
-    if (this.lines.length) {
-      lines = this.lines.slice(0, -1);
-    } else if (this.erasedLines.length) {
-      lines = this.erasedLines.pop();
-    }
-    this.clearExceptErasedLines();
-    this.simulateDrawingLines({ lines, immediate: true });
-    this.triggerOnChange();
-  };
-
-  eraseAll = () => {
-    this.erasedLines.push([...this.lines]);
-    this.clearExceptErasedLines();
-    this.triggerOnChange();
-  };
-
-  clear = () => {
-    this.erasedLines = [];
-    this.clearExceptErasedLines();
-    this.resetView();
-  };
-
-  resetView = () => {
-    return this.coordSystem.resetView();
-  };
-
-  setView = (view) => {
-    return this.coordSystem.setView(view);
-  };
-
-  getSaveData = () => {
-    // Construct and return the stringified saveData object
-    return JSON.stringify({
-      lines: this.lines,
-      width: this.props.canvasWidth,
-      height: this.props.canvasHeight,
-    });
-  };
-
-  /**
-   * Combination of work by Ernie Arrowsmith and emizz
-   * References:
-   * https://stackoverflow.com/questions/32160098/change-html-canvas-black-background-to-white-background-when-creating-jpg-image
-   * https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toDataURL
-
-   * This function will export the canvas to a data URL, which can subsequently be used to share or manipulate the image file.
-   * @param {string} fileType Specifies the file format to export to. Note: should only be the file type, not the "image/" prefix.
-   *  For supported types see https://developer.mozilla.org/en-US/docs/Web/API/HTMLCanvasElement/toDataURL
-   * @param {bool} useBgImage Specifies whether the canvas' current background image should also be exported. Default is false.
-   * @param {string} backgroundColour The desired background colour hex code, e.g. "#ffffff" for white.
-   */
-  getDataURL = (fileType, useBgImage, backgroundColour) => {
-    // Get a reference to the "drawing" layer of the canvas
-    let canvasToExport = this.canvas.drawing;
-
-    let context = canvasToExport.getContext("2d");
-
-    //cache height and width
-    let width = canvasToExport.width;
-    let height = canvasToExport.height;
-
-    //get the current ImageData for the canvas
-    let storedImageData = context.getImageData(0, 0, width, height);
-
-    //store the current globalCompositeOperation
-    var compositeOperation = context.globalCompositeOperation;
-
-    //set to draw behind current content
-    context.globalCompositeOperation = "destination-over";
-
-    // If "useBgImage" has been set to true, this takes precedence over the background colour parameter
-    if (useBgImage) {
-      if (!this.props.imgSrc) return "Background image source not set";
-
-      // Write the background image
-      this.drawImage();
-    } else if (backgroundColour != null) {
-      //set background color
-      context.fillStyle = backgroundColour;
-
-      //fill entire canvas with background colour
-      context.fillRect(0, 0, width, height);
-    }
-
-    // If the file type has not been specified, default to PNG
-    if (!fileType) fileType = "png";
-
-    // Export the canvas to data URL
-    let imageData = canvasToExport.toDataURL(`image/${fileType}`);
-
-    //clear the canvas
-    context.clearRect(0, 0, width, height);
-
-    //restore it with original / cached ImageData
-    context.putImageData(storedImageData, 0, 0);
-
-    //reset the globalCompositeOperation to what it was
-    context.globalCompositeOperation = compositeOperation;
-
-    return imageData;
-  };
-
-  loadSaveData = (saveData, immediate = this.props.immediateLoading) => {
-    if (typeof saveData !== "string") {
-      throw new Error("saveData needs to be of type string!");
-    }
-
-    const { lines, width, height } = JSON.parse(saveData);
-
-    if (!lines || typeof lines.push !== "function") {
-      throw new Error("saveData.lines needs to be an array!");
-    }
-
-    this.clear();
-
-    if (
-      width === this.props.canvasWidth &&
-      height === this.props.canvasHeight
-    ) {
-      this.simulateDrawingLines({
-        lines,
-        immediate,
-      });
-    } else {
-      // we need to rescale the lines based on saved & current dimensions
-      const scaleX = this.props.canvasWidth / width;
-      const scaleY = this.props.canvasHeight / height;
-      const scaleAvg = (scaleX + scaleY) / 2;
-
-      this.simulateDrawingLines({
-        lines: lines.map((line) => ({
-          ...line,
-          points: line.points.map((p) => ({
-            x: p.x * scaleX,
-            y: p.y * scaleY,
-          })),
-          brushRadius: line.brushRadius * scaleAvg,
-        })),
-        immediate,
-      });
-    }
-  };
+  var _proto = CanvasDraw.prototype;
 
   ///// private API ////////////////////////////////////////////////////////////
-
   ///// React Lifecycle
+  _proto.componentDidMount = function componentDidMount() {
+    var _this2 = this;
 
-  componentDidMount() {
     this.lazy = new LazyBrush({
       radius: this.props.lazyRadius * window.devicePixelRatio,
       enabled: true,
       initialPoint: {
         x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      },
+        y: window.innerHeight / 2
+      }
     });
     this.chainLength = this.props.lazyRadius * window.devicePixelRatio;
-
-    this.canvasObserver = new ResizeObserver((entries, observer) =>
-      this.handleCanvasResize(entries, observer)
-    );
+    this.canvasObserver = new ResizeObserver(function (entries, observer) {
+      return _this2.handleCanvasResize(entries, observer);
+    });
     this.canvasObserver.observe(this.canvasContainer);
-
     this.drawImage();
     this.loop();
+    window.setTimeout(function () {
+      var initX = window.innerWidth / 2;
+      var initY = window.innerHeight / 2;
 
-    window.setTimeout(() => {
-      const initX = window.innerWidth / 2;
-      const initY = window.innerHeight / 2;
-      this.lazy.update(
-        { x: initX - this.chainLength / 4, y: initY },
-        { both: true }
-      );
-      this.lazy.update(
-        { x: initX + this.chainLength / 4, y: initY },
-        { both: false }
-      );
-      this.mouseHasMoved = true;
-      this.valuesChanged = true;
-      this.clearExceptErasedLines();
+      _this2.lazy.update({
+        x: initX - _this2.chainLength / 4,
+        y: initY
+      }, {
+        both: true
+      });
 
-      // Load saveData from prop if it exists
-      if (this.props.saveData) {
-        this.loadSaveData(this.props.saveData);
+      _this2.lazy.update({
+        x: initX + _this2.chainLength / 4,
+        y: initY
+      }, {
+        both: false
+      });
+
+      _this2.mouseHasMoved = true;
+      _this2.valuesChanged = true;
+
+      _this2.clearExceptErasedLines(); // Load saveData from prop if it exists
+
+
+      if (_this2.props.saveData) {
+        _this2.loadSaveData(_this2.props.saveData);
       }
-    }, 100);
-
-    // Attach our wheel event listener here instead of in the render so that we can specify a non-passive listener.
+    }, 100); // Attach our wheel event listener here instead of in the render so that we can specify a non-passive listener.
     // This is necessary to prevent the default event action on chrome.
     // https://github.com/facebook/react/issues/14856
-    this.canvas.interface &&
-      this.canvas.interface.addEventListener(
-        "wheel",
-        this.handleWheel,
-        makePassiveEventOption()
-      );
-  }
 
-  componentDidUpdate(prevProps) {
+    this.canvas["interface"] && this.canvas["interface"].addEventListener("wheel", this.handleWheel, makePassiveEventOption());
+  };
+
+  _proto.componentDidUpdate = function componentDidUpdate(prevProps) {
     if (prevProps.lazyRadius !== this.props.lazyRadius) {
       // Set new lazyRadius values
       this.chainLength = this.props.lazyRadius * window.devicePixelRatio;
@@ -337,6 +681,7 @@ export default class CanvasDraw extends PureComponent {
     }
 
     this.coordSystem.scaleExtents = this.props.zoomExtents;
+
     if (!this.props.enablePanAndZoom) {
       this.coordSystem.resetView();
     }
@@ -344,407 +689,112 @@ export default class CanvasDraw extends PureComponent {
     if (prevProps.imgSrc !== this.props.imgSrc) {
       this.drawImage();
     }
-  }
-
-  componentWillUnmount = () => {
-    this.canvasObserver.unobserve(this.canvasContainer);
-    this.canvas.interface &&
-      this.canvas.interface.removeEventListener("wheel", this.handleWheel);
   };
 
-  render() {
-    return (
-      <div
-        className={this.props.className}
-        style={{
-          display: "block",
-          background: this.props.backgroundColor,
-          touchAction: "none",
-          width: this.props.canvasWidth,
-          height: this.props.canvasHeight,
-          ...this.props.style,
-        }}
-        ref={(container) => {
-          if (container) {
-            this.canvasContainer = container;
+  _proto.render = function render() {
+    var _this3 = this;
+
+    return /*#__PURE__*/React.createElement("div", {
+      className: this.props.className,
+      style: _extends({
+        display: "block",
+        background: this.props.backgroundColor,
+        touchAction: "none",
+        width: this.props.canvasWidth,
+        height: this.props.canvasHeight
+      }, this.props.style),
+      ref: function ref(container) {
+        if (container) {
+          _this3.canvasContainer = container;
+        }
+      }
+    }, canvasTypes.map(function (name) {
+      var isInterface = name === "interface";
+      return /*#__PURE__*/React.createElement("canvas", {
+        key: name,
+        ref: function ref(canvas) {
+          if (canvas) {
+            _this3.canvas[name] = canvas;
+            _this3.ctx[name] = canvas.getContext("2d");
+
+            if (isInterface) {
+              _this3.coordSystem.canvas = canvas;
+            }
           }
-        }}
-      >
-        {canvasTypes.map((name) => {
-          const isInterface = name === "interface";
-          return (
-            <canvas
-              key={name}
-              ref={(canvas) => {
-                if (canvas) {
-                  this.canvas[name] = canvas;
-                  this.ctx[name] = canvas.getContext("2d");
-                  if (isInterface) {
-                    this.coordSystem.canvas = canvas;
-                  }
-                }
-              }}
-              style={{ ...canvasStyle }}
-              onMouseDown={isInterface ? this.handleDrawStart : undefined}
-              onMouseMove={isInterface ? this.handleDrawMove : undefined}
-              onMouseUp={isInterface ? this.handleDrawEnd : undefined}
-              onMouseOut={isInterface ? this.handleDrawEnd : undefined}
-              onTouchStart={isInterface ? this.handleDrawStart : undefined}
-              onTouchMove={isInterface ? this.handleDrawMove : undefined}
-              onTouchEnd={isInterface ? this.handleDrawEnd : undefined}
-              onTouchCancel={isInterface ? this.handleDrawEnd : undefined}
-            />
-          );
-        })}
-      </div>
-    );
-  }
-
-  ///// Event Handlers
-
-  handleWheel = (e) => {
-    this.interactionSM = this.interactionSM.handleMouseWheel(e, this);
-  };
-
-  handleDrawStart = (e) => {
-    this.interactionSM = this.interactionSM.handleDrawStart(e, this);
-    this.mouseHasMoved = true;
-  };
-
-  handleDrawMove = (e) => {
-    this.interactionSM = this.interactionSM.handleDrawMove(e, this);
-    this.mouseHasMoved = true;
-  };
-
-  handleDrawEnd = (e) => {
-    this.interactionSM = this.interactionSM.handleDrawEnd(e, this);
-    this.mouseHasMoved = true;
-  };
-
-  applyView = () => {
-    if (!this.ctx.drawing) {
-      return;
-    }
-
-    canvasTypes
-      .map((name) => this.ctx[name])
-      .forEach((ctx) => {
-        this.clearWindow(ctx);
-        const m = this.coordSystem.transformMatrix;
-        ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+        },
+        style: _extends({}, canvasStyle),
+        onMouseDown: isInterface ? _this3.handleDrawStart : undefined,
+        onMouseMove: isInterface ? _this3.handleDrawMove : undefined,
+        onMouseUp: isInterface ? _this3.handleDrawEnd : undefined,
+        onMouseOut: isInterface ? _this3.handleDrawEnd : undefined,
+        onTouchStart: isInterface ? _this3.handleDrawStart : undefined,
+        onTouchMove: isInterface ? _this3.handleDrawMove : undefined,
+        onTouchEnd: isInterface ? _this3.handleDrawEnd : undefined,
+        onTouchCancel: isInterface ? _this3.handleDrawEnd : undefined
       });
+    }));
+  } ///// Event Handlers
+  ;
 
-    if (!this.deferRedrawOnViewChange) {
-      this.drawGrid(this.ctx.grid);
-      this.redrawImage();
-      this.loop({ once: true });
+  return CanvasDraw;
+}(PureComponent);
 
-      const lines = this.lines;
-      this.lines = [];
-      this.simulateDrawingLines({ lines, immediate: true });
-    }
-  };
+_defineProperty(CanvasDraw, "defaultProps", {
+  onChange: null,
+  loadTimeOffset: 5,
+  lazyRadius: 12,
+  brushRadius: 10,
+  brushColor: "#444",
+  catenaryColor: "#0a0302",
+  gridColor: "rgba(150,150,150,0.17)",
+  backgroundColor: "#FFF",
+  hideGrid: false,
+  canvasWidth: 400,
+  canvasHeight: 400,
+  disabled: false,
+  imgSrc: "",
+  saveData: "",
+  immediateLoading: false,
+  hideInterface: false,
+  gridSizeX: 25,
+  gridSizeY: 25,
+  gridLineWidth: 0.5,
+  hideGridX: false,
+  hideGridY: false,
+  enablePanAndZoom: false,
+  mouseZoomFactor: 0.01,
+  zoomExtents: {
+    min: 0.33,
+    max: 3
+  },
+  clampLinesToDocument: false
+});
 
-  handleCanvasResize = (entries) => {
-    const saveData = this.getSaveData();
-    this.deferRedrawOnViewChange = true;
-    try {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        this.setCanvasSize(this.canvas.interface, width, height);
-        this.setCanvasSize(this.canvas.drawing, width, height);
-        this.setCanvasSize(this.canvas.temp, width, height);
-        this.setCanvasSize(this.canvas.grid, width, height);
-
-        this.coordSystem.documentSize = { width, height };
-        this.drawGrid(this.ctx.grid);
-        this.drawImage();
-        this.loop({ once: true });
-      }
-      this.loadSaveData(saveData, true);
-    } finally {
-      this.deferRedrawOnViewChange = false;
-    }
-  };
-
-  ///// Helpers
-
-  clampPointToDocument = (point) => {
-    if (this.props.clampLinesToDocument) {
-      return {
-        x: Math.max(Math.min(point.x, this.props.canvasWidth), 0),
-        y: Math.max(Math.min(point.y, this.props.canvasHeight), 0),
-      };
-    } else {
-      return point;
-    }
-  };
-
-  redrawImage = () => {
-    this.image &&
-      this.image.complete &&
-      drawImage({ ctx: this.ctx.grid, img: this.image });
-  };
-
-  simulateDrawingLines = ({ lines, immediate }) => {
-    // Simulate live-drawing of the loaded lines
-    // TODO use a generator
-    let curTime = 0;
-    let timeoutGap = immediate ? 0 : this.props.loadTimeOffset;
-
-    lines.forEach((line) => {
-      const { points, brushColor, brushRadius } = line;
-
-      // Draw all at once if immediate flag is set, instead of using setTimeout
-      if (immediate) {
-        // Draw the points
-        this.drawPoints({
-          points,
-          brushColor,
-          brushRadius,
-        });
-
-        // Save line with the drawn points
-        this.points = points;
-        this.saveLine({ brushColor, brushRadius });
-        return;
-      }
-
-      // Use timeout to draw
-      for (let i = 1; i < points.length; i++) {
-        curTime += timeoutGap;
-        window.setTimeout(() => {
-          this.drawPoints({
-            points: points.slice(0, i + 1),
-            brushColor,
-            brushRadius,
-          });
-        }, curTime);
-      }
-
-      curTime += timeoutGap;
-      window.setTimeout(() => {
-        // Save this line with its props instead of this.props
-        this.points = points;
-        this.saveLine({ brushColor, brushRadius });
-      }, curTime);
-    });
-  };
-
-  setCanvasSize = (canvas, width, height) => {
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = width;
-    canvas.style.height = height;
-  };
-
-  drawPoints = ({ points, brushColor, brushRadius }) => {
-    this.ctx.temp.lineJoin = "round";
-    this.ctx.temp.lineCap = "round";
-    this.ctx.temp.strokeStyle = brushColor;
-
-    this.clearWindow(this.ctx.temp);
-    this.ctx.temp.lineWidth = brushRadius * 2;
-
-    let p1 = points[0];
-    let p2 = points[1];
-
-    this.ctx.temp.moveTo(p2.x, p2.y);
-    this.ctx.temp.beginPath();
-
-    for (var i = 1, len = points.length; i < len; i++) {
-      // we pick the point between pi+1 & pi+2 as the
-      // end point and p1 as our control point
-      var midPoint = midPointBtw(p1, p2);
-      this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
-      p1 = points[i];
-      p2 = points[i + 1];
-    }
-    // Draw last line as a straight line while
-    // we wait for the next point to be able to calculate
-    // the bezier control point
-    this.ctx.temp.lineTo(p1.x, p1.y);
-    this.ctx.temp.stroke();
-  };
-
-  saveLine = ({ brushColor, brushRadius } = {}) => {
-    if (this.points.length < 2) return;
-
-    // Save as new line
-    this.lines.push({
-      points: [...this.points],
-      brushColor: brushColor || this.props.brushColor,
-      brushRadius: brushRadius || this.props.brushRadius,
-    });
-
-    // Reset points array
-    this.points.length = 0;
-
-    // Copy the line to the drawing canvas
-    this.inClientSpace([this.ctx.drawing, this.ctx.temp], () => {
-      this.ctx.drawing.drawImage(
-        this.canvas.temp,
-        0,
-        0,
-        this.canvas.drawing.width,
-        this.canvas.drawing.height
-      );
-    });
-
-    // Clear the temporary line-drawing canvas
-    this.clearWindow(this.ctx.temp);
-
-    this.triggerOnChange();
-  };
-
-  triggerOnChange = () => {
-    this.props.onChange && this.props.onChange(this);
-  };
-
-  clearWindow = (ctx) => {
-    this.inClientSpace([ctx], () =>
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-    );
-  };
-
-  clearExceptErasedLines = () => {
-    this.lines = [];
-    this.valuesChanged = true;
-    this.clearWindow(this.ctx.drawing);
-    this.clearWindow(this.ctx.temp);
-  };
-
-  loop = ({ once = false } = {}) => {
-    if (this.mouseHasMoved || this.valuesChanged) {
-      const pointer = this.lazy.getPointerCoordinates();
-      const brush = this.lazy.getBrushCoordinates();
-
-      this.drawInterface(this.ctx.interface, pointer, brush);
-      this.mouseHasMoved = false;
-      this.valuesChanged = false;
-    }
-
-    if (!once) {
-      window.requestAnimationFrame(() => {
-        this.loop();
-      });
-    }
-  };
-
-  inClientSpace = (ctxs, action) => {
-    ctxs.forEach((ctx) => {
-      ctx.save();
-      ctx.setTransform(
-        IDENTITY.a,
-        IDENTITY.b,
-        IDENTITY.c,
-        IDENTITY.d,
-        IDENTITY.e,
-        IDENTITY.f
-      );
-    });
-
-    try {
-      action();
-    } finally {
-      ctxs.forEach((ctx) => ctx.restore());
-    }
-  };
-
-  ///// Canvas Rendering
-
-  drawImage = () => {
-    if (!this.props.imgSrc) return;
-
-    // Load the image
-    this.image = new Image();
-
-    // Prevent SecurityError "Tainted canvases may not be exported." #70
-    this.image.crossOrigin = "anonymous";
-
-    // Draw the image once loaded
-    this.image.onload = this.redrawImage;
-    this.image.src = this.props.imgSrc;
-  };
-
-  drawGrid = (ctx) => {
-    if (this.props.hideGrid) return;
-
-    this.clearWindow(ctx);
-
-    const gridSize = 25;
-    const { viewMin, viewMax } = this.coordSystem.canvasBounds;
-    const minx = Math.floor(viewMin.x / gridSize - 1) * gridSize;
-    const miny = Math.floor(viewMin.y / gridSize - 1) * gridSize;
-    const maxx = viewMax.x + gridSize;
-    const maxy = viewMax.y + gridSize;
-
-    ctx.beginPath();
-    ctx.setLineDash([5, 1]);
-    ctx.setLineDash([]);
-    ctx.strokeStyle = this.props.gridColor;
-    ctx.lineWidth = this.props.gridLineWidth;
-
-    if (!this.props.hideGridX) {
-      let countX = minx;
-      const gridSizeX = this.props.gridSizeX;
-      while (countX < maxx) {
-        countX += gridSizeX;
-        ctx.moveTo(countX, miny);
-        ctx.lineTo(countX, maxy);
-      }
-      ctx.stroke();
-    }
-
-    if (!this.props.hideGridY) {
-      let countY = miny;
-      const gridSizeY = this.props.gridSizeY;
-      while (countY < maxy) {
-        countY += gridSizeY;
-        ctx.moveTo(minx, countY);
-        ctx.lineTo(maxx, countY);
-      }
-      ctx.stroke();
-    }
-  };
-
-  drawInterface = (ctx, pointer, brush) => {
-    if (this.props.hideInterface) return;
-
-    this.clearWindow(ctx);
-
-    // Draw brush preview
-    ctx.beginPath();
-    ctx.fillStyle = this.props.brushColor;
-    ctx.arc(brush.x, brush.y, this.props.brushRadius, 0, Math.PI * 2, true);
-    ctx.fill();
-
-    // Draw mouse point (the one directly at the cursor)
-    ctx.beginPath();
-    ctx.fillStyle = this.props.catenaryColor;
-    ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2, true);
-    ctx.fill();
-
-    // Draw catenary
-    if (this.lazy.isEnabled()) {
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.setLineDash([2, 4]);
-      ctx.strokeStyle = this.props.catenaryColor;
-      this.catenary.drawToCanvas(
-        this.ctx.interface,
-        brush,
-        pointer,
-        this.chainLength
-      );
-      ctx.stroke();
-    }
-
-    // Draw brush point (the one in the middle of the brush preview)
-    ctx.beginPath();
-    ctx.fillStyle = this.props.catenaryColor;
-    ctx.arc(brush.x, brush.y, 2, 0, Math.PI * 2, true);
-    ctx.fill();
-  };
-}
+export { CanvasDraw as default };
+CanvasDraw.propTypes = process.env.NODE_ENV !== "production" ? {
+  onChange: PropTypes.func,
+  loadTimeOffset: PropTypes.number,
+  lazyRadius: PropTypes.number,
+  brushRadius: PropTypes.number,
+  brushColor: PropTypes.string,
+  catenaryColor: PropTypes.string,
+  gridColor: PropTypes.string,
+  backgroundColor: PropTypes.string,
+  hideGrid: PropTypes.bool,
+  canvasWidth: dimensionsPropTypes,
+  canvasHeight: dimensionsPropTypes,
+  disabled: PropTypes.bool,
+  imgSrc: PropTypes.string,
+  saveData: PropTypes.string,
+  immediateLoading: PropTypes.bool,
+  hideInterface: PropTypes.bool,
+  gridSizeX: PropTypes.number,
+  gridSizeY: PropTypes.number,
+  gridLineWidth: PropTypes.number,
+  hideGridX: PropTypes.bool,
+  hideGridY: PropTypes.bool,
+  enablePanAndZoom: PropTypes.bool,
+  mouseZoomFactor: PropTypes.number,
+  zoomExtents: boundsProp,
+  clampLinesToDocument: PropTypes.bool
+} : {};
